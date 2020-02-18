@@ -1,0 +1,207 @@
+---
+- name: execute script 
+  hosts: localhost
+  tasks:
+       -  name: execute test script
+          script: /tmp/testmail.sh
+ # cat  /etc/testmail.sh
+ #  echo testmail | mailx -S testmail <email>
+ #------------
+## Belwo playboook will add a line " This is  HelloHello" in the file /tmp/testfile on server server1. 
+- name: variable assignment
+  hosts: server1
+  vars:
+    myname: HelloHello
+  tasks:
+    - name: Test name
+      lineinfile:
+            path: /tmp/testfile
+            line: 'This is  {{ myname }}'
+       
+# --------------
+-  name: Service start
+   hosts: localhost
+   tasks:
+        - name:  Start httpd service
+          Service: 
+             name: httpd 
+             state: started
+# -------------
+-  name: Install nginx on Debian
+   hosts: debian
+   tasks:
+     - name: Install nginx on debian
+       apt:  
+          name: nginx
+          state: present
+-  name: Install nginx on RHEL
+   hosts: rhel
+   tasks: 
+     - name:  Install nginx on RHEL
+       yum: 
+          name: nginx 
+          state: present
+#
+Above play can be written in another way using condition (yum for RHEL and Suse ; apt for Debian and with specific version)
+
+-  name: Install nginx on  Debian and RHEL
+   hosts: all
+   tasks: 
+    -  name: Install nginx on  Debian
+       apt:
+         name: nginx
+         state: present
+       when: ansible_os_family == "Debian" and
+             ansible_distribution_version == "16.04"
+    - name: Install nginx on  RHEL
+      yum:  
+         name: nginx 
+         state: present
+      when: ansible_os_family == "RedHat" or
+            ansible_os_family == "Suse"
+## Below is a simple condition checking playbook.
+
+- name:  Install package if OS is rhel
+  hosts:  server1
+  gather_facts: yes
+  become: yes
+  tasks:
+     -  name:  Install package
+        yum:
+          name: nginx
+          state: present
+        when: ansible_os_family == "RedHat"
+
+#  
+check status of service  and send email if it is down. (This is not working now)
+
+-  name: Check httpd service status and send email if it is down 
+   hosts: webservers
+   tasks: 
+     -  command: service  httpd status
+        register:  result
+     -  mail: 
+          to : bijeeshmanappatty@toppanmerrillllc.com
+          subject: httpd-status
+          body: httpd service is down
+        when:  result.stdout.find('dead') != -1
+#
+
+-   name: 'Add name server entry if not already entered'
+    hosts: localhost
+    tasks:
+        -
+            shell: 'cat /etc/resolv.conf'
+            register: command_output
+        -
+            shell: 'echo "nameserver 10.0.250.10" >> /etc/resolv.conf'
+            when:  'command_output.stdout.find("10.0.250.10") == -1'
+#
+#Looping
+- name: create one user
+  hosts: testhosts
+  tasks:
+     - user: name=john state=present
+#
+- name: create more users
+  hosts: testhosts
+  tasks: 
+     - user: name='{{ item }'  state=present
+       loop:
+          - john
+          - ravi
+          - mani
+          - kiran
+#
+- name: create users with UIDs
+  hosts:  testhosts 
+  tasks: 
+    - user: name= '{{item.name }}' state=present uid='{{ item.uid}}' 
+      loop:
+        - name: john
+          uid: 1010
+        - name: ravi 
+          uid: 1011
+        - name: mani 
+          uid: 1012
+        - name: kiran  
+          uid: 1013
+#
+- name: loop "with_"
+  hosts: localhost
+  vars:
+    fruits:
+      - Apple
+      - Orange
+      - Grapes
+  tasks:
+          - command:  'echo "{{ item }}"'
+            with_items: '{{ fruits }}'
+# same can be write as follows without vars
+- name: execute loop
+  hosts: localhost
+  tasks:
+      - command: 'echo "{{ item }}"'
+        with_items:
+           - Apple
+           - Orange
+           - Grapes
+#- name: execute loop
+  hosts: localhost
+  tasks:
+      - command: 'echo "{{ item }}"'
+        loop:
+           - Apple
+           - Orange
+           - Grapes
+#
+Anssible Role:
+Pre-defined tasks which can be use for others. 
+For example, installing,enabling and starting a service we can write a yml play book  like below.  
+-  name:  Install, enable and start httpd
+   hosts: webservers
+   tasks: 
+      -name:  Install httpd
+       yum: 
+           name:  httpd 
+           state: present
+       service: 
+           name: httpd
+           state: started    
+           eabled: yes           
+#
+The above thisngs we can use in a play book  as  a role, called http
+- name: Install, enable and start httpd using role
+  hosts: webservers
+  roles:
+      - name:  http
+#
+Roles use organized way for storing different kind of:
+files,tasks, defaults, vars,  templates,hanlders   etc .
+To create own Role from scratch,
+$ansible-galaxy init http
+This will create a directory structure with name: http
+To use this role with previous play book: move the new directory structure to the directory "roles" in the location 
+where your play book created. 
+Or copy the new directory  sructure to  /etc/ansible/roles directory which is the default location
+where ansible searches for the roles. 
+###
+-  name: install nginx using role
+   hosts: test-stp
+   become: yes
+   roles:
+    - nginx
+#
+---
+# tasks file for nginx
+- name: install nginx
+  yum:
+       name: nginx
+       state: present
+- name:  start and enable nginx
+  service:
+       name: nginx
+       state: started
+       enabled: yes
+#
+

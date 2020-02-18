@@ -1,0 +1,57 @@
+File separation: 
+Variables can be added in to a file , instead of mentioning in the inventory file. 
+=> Create a directory called "host_vars" on the same directory  where the play book resides. 
+Inside the host_vars, add a new yml file with the same name as the host name mentioned in the inventory file.
+  
+#cat inventory.txt
+web_server1
+#cd host_vars
+#cat web_server1.yml
+ansible_host: <host-IP>
+ansible_ssh_pass: <password>
+
+host_vars > for hosts
+group_vars > for host groups. 
+-----------------
+Include statement and Roles:
+
+Add db configuration steps into one yml file and that for web server into another. Ensure these files are created
+inside a directory called tasks which is on the same directory where the main play book present. 
+-
+  name: Install DB and web
+  hosts: db_and_web_server
+  tasks: 
+     - include: tasks/deploy_db.yml
+	 - include: tasks/deploy_web.yml
+# cd tasks
+#cat  deploy_db.yml
+ <steps for db deployment>
+#cat  deploy_web.yml
+ <steps for web deployment>
+---------------
+# To start a service using the vars inside play book. 
+-  name: start the service
+   hosts: server1
+   become: yes
+   vars:
+     service_name: httpd
+   tasks:
+     - name: start the service mentioned in the service_name
+       service:
+          name: "{{ service_name }}"
+          state: started
+##
+# Stop the service using host_vars directory and variable file. 
+-  name: stop the service
+   hosts: server1
+   become: yes
+#   vars:
+#     service_name: httpd
+   tasks:
+     - name: stop the service mentioned in the service_name
+       service:
+          name: "{{ service_name }}"
+          state: stopped
+# cat host_vars/server1.yml
+service_name: httpd
+##

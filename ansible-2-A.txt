@@ -1,0 +1,146 @@
+Oracle virtual box:
+From OSbexes - download the OS image ( devian 8.6)
+Build new VM on Virtual box, select 
+Use an existing virtual hard disk
+Settings>NW> Bridged 
+
+Open terminal: Check IP
+Install  ansible: Check docs.ansible
+
+Install two traget  hosts
+
+Check- host_key_checking settings in ansible.cfg
+
+====================
+Using Docker
+One machine with  ansible and docker
+# docker run -iitd <image-ubuntu>      [https://docs.docker.com/engine/examples/running_ssh_service/]
+
+   docker run -d mmumshad/ubuntu-ssh-enabled
+   
+#docker inspect <containetid>    # check IP iddress 
+    root: Passw0rd
+
+Run 3 instances
+On the control machine - create  the inventory.
+--
+target1 ansible_host=<ip>  ansible_ssh_pass=<password>
+target2 ansible_host=<ip>  ansible_ssh_pass=<password>
+target3 ansible_host=<ip>  ansible_ssh_pass=<password>
+#ansible  target* -m ping -i <inventory>
+-------------
+
+For the new set up: 
+Identify the server
+Install python dependencies
+Install mysql  
+Install Flask 
+get the source code
+run the application
+
+1. Use one linux server in Virtual box.
+2.  https://github.com/mmumshad/simple-webapp
+INSTALL dependencis
+    apt-get install -y python python-setuptools python-dev build-essential python-pip python-mysqldb
+
+INSTALL and start  mysql
+    apt-get install -y mysql-server mysql-client
+    service mysql start
+Configure database
+    # mysql -u <username> -p
+
+mysql> CREATE DATABASE employee_db;
+mysql> GRANT ALL ON *.* to db_user@'%' IDENTIFIED BY 'Passw0rd';
+mysql> USE employee_db;
+mysql> CREATE TABLE employees (name VARCHAR(20));
+
+mysql> INSERT INTO employees VALUES ('JOHN');
+
+Install and configure webserver
+pip install flask
+pip install flask-mysql
+
+Copy app.py or download it from source repository
+Configure database credentials and parameters
+
+Start the web server
+FLASK_APP=app.py flask run --host=0.0.0.0
+
+6. Test
+Open a browser and go to URL
+
+http://<IP>:5000                            => Welcome
+http://<IP>:5000/how%20are%20you            => I am good, how about you?
+http://<IP>:5000/read%20from%20database     => JOHN
+***
+import os
+from flask import Flask
+from flaskext.mysql import MySQL      # For newer versions of flask-mysql 
+# from flask.ext.mysql import MySQL   # For older versions of flask-mysql
+app = Flask(__name__)
+
+mysql = MySQL()
+
+mysql_database_host = 'MYSQL_DATABASE_HOST' in os.environ and os.environ['MYSQL_DATABASE_HOST'] or  'localhost'
+
+# MySQL configurations
+app.config['MYSQL_DATABASE_USER'] = 'db_user'
+app.config['MYSQL_DATABASE_PASSWORD'] = 'Passw0rd'
+app.config['MYSQL_DATABASE_DB'] = 'employee_db'
+app.config['MYSQL_DATABASE_HOST'] = mysql_database_host
+mysql.init_app(app)
+
+conn = mysql.connect()
+
+cursor = conn.cursor()
+
+@app.route("/")
+def main():
+    return "Welcome!"
+
+@app.route('/how are you')
+def hello():
+    return 'I am good, how about you?'
+
+@app.route('/read from database')
+def read():
+    cursor.execute("SELECT * FROM employees")
+    row = cursor.fetchone()
+    result = []
+    while row is not None:
+      result.append(row[0])
+      row = cursor.fetchone()
+
+    return ",".join(result)
+
+if __name__ == "__main__":
+    app.run()
+*******
+Copy  app.py  to the server .
+Run the script. 
+#python app.py
+
+#export FLASK_APP=app.py
+#flask run --host=0.0.0.0
+***
+Try access  the URL.
+
+###
+
+Above procedure for Centos 7
+(https://github.com/kodekloudhub/simple_web_application/blob/master/playbook.yml)
+#sudo yum install -y epel-release python python-pip
+
+sudo pip install flask flask-mysql
+(if any error, use this command:
+sudo pip install --trusted-host files.pythonhosted.org --trusted-host pypi.org --trusted-host pypi.python.org flask flask-mysql
+)
+wget http://repo.mysql.com/mysql-community-release-el7-5.noarch.rpm
+
+sudo rpm -ivh mysql-community-release-el7-5.noarch.rpm
+
+sudo yum update
+
+sudo yum -y install mysql-server
+
+sudo service mysql start
