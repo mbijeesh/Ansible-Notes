@@ -1,3 +1,6 @@
+#command to collect facts
+ansible linux-infra -m setup 
+
 ---
 - name: execute script 
   hosts: localhost
@@ -5,13 +8,13 @@
        -  name: execute test script
           script: /tmp/testmail.sh
  # cat  /etc/testmail.sh
- #  echo testmail | mailx -S testmail <email>
+ #  echo testmail | mailx -s testmail <email>
  #------------
-## Belwo playboook will add a line " This is  HelloHello" in the file /tmp/testfile on server server1. 
+## Belwo playboook will add a line " This is  unixadmin" in the file /tmp/testfile on server server1. 
 - name: variable assignment
   hosts: server1
   vars:
-    myname: HelloHello
+    myname: unixadmin
   tasks:
     - name: Test name
       lineinfile:
@@ -71,20 +74,52 @@ Above play can be written in another way using condition (yum for RHEL and Suse 
           name: nginx
           state: present
         when: ansible_os_family == "RedHat"
+#
+Store the output and use it for another action:
+Below playbook check the /etc/motd content and if it found a word Restrict, it will execute the shell command. 
+
+- name: test play
+  hosts: server1
+  tasks:
+      - shell: cat /etc/motd
+        register: motd_contents
+
+      - shell: echo "motd contains the word Restrict" > /tmp/output.b
+        when: motd_contents.stdout.find('Restrict') != -1
+#####
+Using the  above play, we can send email instead of adding an entry to file. 
+
+- name: test play
+  hosts: server1
+  gather_facts: no
+  tasks:
+
+      - shell: cat /etc/motd
+        register: motd_contents
+      - mail:
+          to: bijeeshmanappatty@toppanmerrillllc.com
+          subject: status
+          body: status motd
+          from: uxadmin@linux-dev-stp.tm.toppanmerrill.com
+        when: motd_contents.stdout.find('Toppan') != -1
 
 #  
 check status of service  and send email if it is down. (This is not working now)
 
--  name: Check httpd service status and send email if it is down 
-   hosts: webservers
-   tasks: 
-     -  command: service  httpd status
+-  name: Check httpd service status and send email if it is down
+   hosts: server1
+   gather_facts: no
+   tasks:
+     -  shell: systemctl status httpd
         register:  result
-     -  mail: 
+        ignore_errors: True
+     -  mail:
           to : bijeeshmanappatty@toppanmerrillllc.com
           subject: httpd-status
           body: httpd service is down
+          from: uxadmin@linux-dev-stp.tm.toppanmerrill.com
         when:  result.stdout.find('dead') != -1
+
 #
 
 -   name: 'Add name server entry if not already entered'
@@ -156,7 +191,7 @@ check status of service  and send email if it is down. (This is not working now)
            - Grapes
 #
 Anssible Role:
-Pre-defined tasks which can be use for others. 
+Pre-defined tasks which can be use by others. 
 For example, installing,enabling and starting a service we can write a yml play book  like below.  
 -  name:  Install, enable and start httpd
    hosts: webservers
@@ -170,38 +205,36 @@ For example, installing,enabling and starting a service we can write a yml play 
            state: started    
            eabled: yes           
 #
-The above thisngs we can use in a play book  as  a role, called http
-- name: Install, enable and start httpd using role
-  hosts: webservers
-  roles:
-      - name:  http
+The above things we can use in a play book  as  a role.
+
 #
 Roles use organized way for storing different kind of:
 files,tasks, defaults, vars,  templates,hanlders   etc .
 To create own Role from scratch,
-$ansible-galaxy init http
-This will create a directory structure with name: http
-To use this role with previous play book: move the new directory structure to the directory "roles" in the location 
+
+$ansible-galaxy init http-test
+This will create a directory structure with name: http-test
+To use this role within a play book: move the new directory structure to the directory "roles" in the location 
 where your play book created. 
 Or copy the new directory  sructure to  /etc/ansible/roles directory which is the default location
 where ansible searches for the roles. 
+
 ###
--  name: install nginx using role
+-  name: install http using role
    hosts: test-stp
    become: yes
    roles:
-    - nginx
+    - http-test
 #
 ---
-# tasks file for nginx
-- name: install nginx
-  yum:
-       name: nginx
-       state: present
-- name:  start and enable nginx
-  service:
-       name: nginx
-       state: started
-       enabled: yes
+#vi http-test/tasks/main.yml
+# tasks file for http
+      -name:  Install httpd
+       yum: 
+           name:  httpd 
+           state: present
+       service: 
+           name: httpd
+           state: started    
+           eabled: yes   
 #
-
