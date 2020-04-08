@@ -114,10 +114,10 @@ check status of service  and send email if it is down. (This is not working now)
         register:  result
         ignore_errors: True
      -  mail:
-          to : bijeeshmanappatty@toppanmerrillllc.com
+          to : emailid
           subject: httpd-status
           body: httpd service is down
-          from: uxadmin@linux-dev-stp.tm.toppanmerrill.com
+          from: emailid
         when:  result.stdout.find('dead') != -1
 
 #
@@ -129,8 +129,8 @@ check status of service  and send email if it is down. (This is not working now)
             shell: 'cat /etc/resolv.conf'
             register: command_output
         -
-            shell: 'echo "nameserver 10.0.250.10" >> /etc/resolv.conf'
-            when:  'command_output.stdout.find("10.0.250.10") == -1'
+            shell: 'echo "nameserver 10.0.0.0" >> /etc/resolv.conf'
+            when:  'command_output.stdout.find("10.0.0.0") == -1'
 #
 #Looping
 - name: create one user
