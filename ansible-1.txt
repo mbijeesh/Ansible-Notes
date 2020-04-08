@@ -97,10 +97,10 @@ Using the  above play, we can send email instead of adding an entry to file.
       - shell: cat /etc/motd
         register: motd_contents
       - mail:
-          to: bijeeshmanappatty@toppanmerrillllc.com
+          to: email
           subject: status
           body: status motd
-          from: uxadmin@linux-dev-stp.tm.toppanmerrill.com
+          from: email
         when: motd_contents.stdout.find('Toppan') != -1
 
 #  
